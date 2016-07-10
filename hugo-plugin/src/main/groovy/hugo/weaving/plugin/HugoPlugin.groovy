@@ -14,7 +14,10 @@ class HugoPlugin implements Plugin<Project> {
     def hasApp = project.plugins.withType(AppPlugin)
     def hasLib = project.plugins.withType(LibraryPlugin)
     if (!hasApp && !hasLib) {
-      throw new IllegalStateException("'android' or 'android-library' plugin required.")
+      throw new IllegalStateException("'android' or 'android-libr" +
+              "" +
+              "" +
+              "ary' plugin required.")
     }
 
     final def log = project.logger

@@ -6,15 +6,19 @@ import android.os.SystemClock;
 import android.util.Log;
 import android.widget.TextView;
 import hugo.weaving.DebugLog;
+import android.util.*;
 
 public class HugoActivity extends Activity {
-  @Override protected void onCreate(Bundle savedInstanceState) {
+  @Override
+  protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     TextView tv = new TextView(this);
     tv.setText("Check logcat!");
     setContentView(tv);
 
     printArgs("The", "Quick", "Brown", "Fox");
+
+
 
     Log.i("Fibonacci", "fibonacci's 4th number is " + fibonacci(4));
 
@@ -27,6 +31,8 @@ public class HugoActivity extends Activity {
     startSleepyThread();
   }
 
+
+
   @DebugLog
   private void printArgs(String... args) {
     for (String arg : args) {
@@ -34,7 +40,7 @@ public class HugoActivity extends Activity {
     }
   }
 
-  @DebugLog
+  @DebugLog(threshold=1,timeUnit="micro",isShowStack=true)
   private int fibonacci(int number) {
     if (number <= 0) {
       throw new IllegalArgumentException("Number must be greater than zero.");
@@ -45,6 +51,7 @@ public class HugoActivity extends Activity {
     // NOTE: Don't ever do this. Use the iterative approach!
     return fibonacci(number - 1) + fibonacci(number - 2);
   }
+
 
   private void startSleepyThread() {
     new Thread(new Runnable() {
@@ -61,7 +68,7 @@ public class HugoActivity extends Activity {
     }, "I'm a lazy thr.. bah! whatever!").start();
   }
 
-  @DebugLog
+  @DebugLog(timeUnit="micro")
   static class Greeter {
     private final String name;
 
@@ -70,6 +77,12 @@ public class HugoActivity extends Activity {
     }
 
     private String sayHello() {
+      try{
+        Thread.sleep(1000);
+      }catch (InterruptedException e) {
+        e.printStackTrace();
+      }
+
       return "Hello, " + name;
     }
   }

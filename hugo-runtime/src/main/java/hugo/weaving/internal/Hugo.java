@@ -16,6 +16,8 @@ import org.aspectj.lang.reflect.MethodSignature;
 
 import java.util.concurrent.TimeUnit;
 
+import hugo.weaving.DebugLog;
+
 @Aspect
 public class Hugo {
   private static volatile boolean enabled = true;
@@ -41,14 +43,18 @@ public class Hugo {
 
   @Around("method() || constructor()")
   public Object logAndExecute(ProceedingJoinPoint joinPoint) throws Throwable {
+
     enterMethod(joinPoint);
+
 
     long startNanos = System.nanoTime();
     Object result = joinPoint.proceed();
     long stopNanos = System.nanoTime();
-    long lengthMillis = TimeUnit.NANOSECONDS.toMillis(stopNanos - startNanos);
 
+
+    long lengthMillis = stopNanos - startNanos;
     exitMethod(joinPoint, result, lengthMillis);
+
 
     return result;
   }
@@ -62,15 +68,22 @@ public class Hugo {
     String methodName = codeSignature.getName();
     String[] parameterNames = codeSignature.getParameterNames();
     Object[] parameterValues = joinPoint.getArgs();
-
+//    for(int i=0 ; i<10;i++){
+//        System.out.println("dddddddddddddddddddddddddddddddddddddddddddddddd");
+//    }
     StringBuilder builder = new StringBuilder("\u21E2 ");
     builder.append(methodName).append('(');
     for (int i = 0; i < parameterValues.length; i++) {
-      if (i > 0) {
+
+      if (i > 0 && i<10) {
         builder.append(", ");
       }
       builder.append(parameterNames[i]).append('=');
       builder.append(Strings.toString(parameterValues[i]));
+      if(i==10){
+        builder.append("...");
+        break;
+      }
     }
     builder.append(')');
 
@@ -86,7 +99,8 @@ public class Hugo {
     }
   }
 
-  private static void exitMethod(JoinPoint joinPoint, Object result, long lengthMillis) {
+
+  private static void exitMethod(JoinPoint joinPoint, Object result, long tLenProcedd) {
     if (!enabled) return;
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
@@ -96,22 +110,66 @@ public class Hugo {
     Signature signature = joinPoint.getSignature();
 
     Class<?> cls = signature.getDeclaringType();
+
     String methodName = signature.getName();
+
+    //设置三个配置的默认值，时间门限为0,单位默认为毫秒，默认不打印日志
+    long timeThreshold = 0;
+    String timeUnit = "mill";
+    boolean isShowStack = false;
+    //获取DebugLog注解对象
+    DebugLog d1 = (DebugLog) signature.getDeclaringType().getAnnotation(DebugLog.class);
+    //如果注解在方法上，通过MethodSignature获得
+    if(d1==null){
+      MethodSignature ms = (MethodSignature)signature;
+      d1 = (DebugLog) ms.getMethod().getAnnotation(DebugLog.class);
+    }
+    //根据获取到的DebugLog对象，获得配置
+    timeThreshold = d1.threshold();
+    timeUnit = d1.timeUnit();
+    isShowStack = d1.isShowStack();
+
     boolean hasReturnType = signature instanceof MethodSignature
         && ((MethodSignature) signature).getReturnType() != void.class;
 
-    StringBuilder builder = new StringBuilder("\u21E0 ")
-        .append(methodName)
-        .append(" [")
-        .append(lengthMillis)
-        .append("ms]");
-
-    if (hasReturnType) {
-      builder.append(" = ");
-      builder.append(Strings.toString(result));
+    //根据时间单位换算tLenProceed的大小
+    if(timeUnit .equals("mill")){
+      tLenProcedd = TimeUnit.NANOSECONDS.toMillis(tLenProcedd);
+      timeUnit = "ms";
+    }
+    else  if(timeUnit.equals("micro")){
+      tLenProcedd = TimeUnit.NANOSECONDS.toMicros(tLenProcedd);
+    }else if(timeUnit.equals("nano")){
+      tLenProcedd = tLenProcedd;
+    }else{
+      tLenProcedd = TimeUnit.NANOSECONDS.toMillis(tLenProcedd);
+      timeUnit = "ms";
     }
 
-    Log.v(asTag(cls), builder.toString());
+    //当运行时长大于门限时，输出运行时间
+    if(tLenProcedd>=timeThreshold){
+      StringBuilder builder = new StringBuilder("\u21E0 ")
+              .append(methodName)
+              .append(" [")
+              .append(tLenProcedd).append("]")
+              .append(timeUnit);
+
+      if (hasReturnType) {
+        builder.append(" = ");
+        builder.append(Strings.toString(result));
+      }
+      Log.v(asTag(cls), builder.toString());
+
+    }
+    //小于门限时不输出运行情况
+    else{
+      Log.v("notime","lower than the threshold,This turn does not neet output");
+    }
+    //需要打印日志时，打印
+    if(isShowStack){
+      Exception e = new Exception("this is a log");
+      e.printStackTrace();
+    }
   }
 
   private static String asTag(Class<?> cls) {
