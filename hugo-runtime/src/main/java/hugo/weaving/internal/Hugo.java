@@ -68,9 +68,6 @@ public class Hugo {
     String methodName = codeSignature.getName();
     String[] parameterNames = codeSignature.getParameterNames();
     Object[] parameterValues = joinPoint.getArgs();
-//    for(int i=0 ; i<10;i++){
-//        System.out.println("dddddddddddddddddddddddddddddddddddddddddddddddd");
-//    }
     StringBuilder builder = new StringBuilder("\u21E2 ");
     builder.append(methodName).append('(');
     for (int i = 0; i < parameterValues.length; i++) {
